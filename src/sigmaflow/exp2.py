@@ -19,10 +19,7 @@ from .flow import sigmaflow_anisotropic_static
 
 
 ########################## CONSTANTS ##########################
-try:
-    Ar = Array | np.ndarray  # works only for python 3.10 or greater
-except:
-    Ar = np.ndarray
+Ar = Array | np.ndarray
 JV = jax.vmap
 
 

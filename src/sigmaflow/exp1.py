@@ -16,10 +16,7 @@ from scipy.special import softmax
 from .flow import sigmaflow, Pi_0
 
 ########################## CONSTANTS ##########################
-try:
-    AR = Array | np.ndarray  # works only for python 3.10 or greater
-except:
-    AR = np.ndarray
+AR = Array | np.ndarray
 
 
 @dataclass
