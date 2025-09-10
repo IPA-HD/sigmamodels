@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sigmaflow"
+authors = [
+  { name = "Jonas Cassel", email = "jonas.cassel@math.uni-heidelberg.de" },
+]
+description = "Sigma flow implementation"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  'jax',
+  'diffrax',
+  'optax',
+  'equinox',
+  'numpy',
+  'matplotlib',
+  'tqdm',
+  'scipy',
+  'einops',
+  'scikit-learn',
+]
+
+[project.optional-dependencies]
+jax70 = [
+  'jax==0.7.0',
+  'jaxlib==0.7.0',
+  'diffrax==0.7.0',
+  'optax==0.2.5',
+  'equinox==0.13.0',
+  'numpy==2.3.2',
+  'scipy==1.16.1',
+  'einops==0.8.1',
+]
+CUDA11 = [
+  'jax==0.4.9',
+  'diffrax==0.3.0',
+  'jaxtyping==0.2.15',
+  'jaxlib @ https://storage.googleapis.com/jax-releases/cuda11/jaxlib-0.4.7+cuda11.cudnn82-cp311-cp311-manylinux2014_x86_64.whl',
+  'optax==0.1.5',
+  'equinox==0.10.2',
+  'chex==0.1.5',
+  'scipy==1.11.4',
+]
+
+[tool.ruff.lint]
+ignore = ["F", "E"]

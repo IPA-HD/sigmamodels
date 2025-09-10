@@ -1,0 +1,1 @@
+{"num_iter": 10000, "batch_size": 4, "capture": true, "git_track": true, "ks": 15, "mass": 1, "dim1": 20, "dim2": 16, "scale": 0.1, "optim": "lion(1e-4,weight_decay=1e-3)", "path": "artifacts", "resumeId": null, "size": 128, "nl": 2, "weight": 0, "model": "unet", "type": "voronoi", "git": "9197a864bc9f0765bbefff09560cf2b3cc6ef421", "date": "2025-09-01 17:03:19.275907"}
