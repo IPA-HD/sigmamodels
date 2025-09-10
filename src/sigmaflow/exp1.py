@@ -17,9 +17,9 @@ from .flow import sigmaflow, Pi_0
 
 ########################## CONSTANTS ##########################
 try:
-    Ar = Array | np.ndarray  # works only for python 3.10 or greater
+    AR = Array | np.ndarray  # works only for python 3.10 or greater
 except:
-    Ar = np.ndarray
+    AR = np.ndarray
 
 
 @dataclass
