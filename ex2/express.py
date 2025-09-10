@@ -22,12 +22,6 @@ C = Constants(
     NOISE=noise,
     COLORCODE=plt.cm.tab20(np.arange(20))[..., :-1],
 )
-from sigmaflow.flow import sigmaflow
-
-plt.imshow(sigmaflow(C.NOISE, t=3, m=1)[-1].argmax(-1), cmap="tab20")
-plt.axis("off")
-plt.savefig("/Users/jonas/coding/sigmaproj/flat")
-os._exit(-1)
 
 # %% ===========================================================
 mp = Diffusion_Tensor((512, 512, 3), C.KEY, metric_generator_cells)
