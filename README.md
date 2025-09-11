@@ -58,14 +58,13 @@ Warnings like
 ```bash
 E external/xla/xla/stream_executor/cuda/cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems. 
 ```
-can be silenced by appendung `2> /dev/null` to the commands.
+can be silenced by appending `2> /dev/null` to the commands.
 
 ## Tested environments
 We tested the configuration with JAX version 0.7.0, installable via 
 ```bash
 pip install -e ".[jax70]"
 ```
-which ran on our machines.
 
 # Citation
 ```
