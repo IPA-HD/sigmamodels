@@ -38,12 +38,11 @@ def train(m, x, gt, optim, epochs, os=None):
 
     params = eqx.filter(m, eqx.is_array)
     os = optim.init(params)
-    pbar = tqdm(range(epochs))
-    for _ in pbar:
+    for i in range(epochs):
         X = x  # + 0.1 * np.random.randn(*x.shape)
         m, ls, os = train_step(m, X, gt, os)
-        pbar.set_description(f"loss {ls:.5f}")
-        pbar.refresh()
+        if i % 100:
+            print(f"loss {ls:.5f}")
 
     return m, os
 
