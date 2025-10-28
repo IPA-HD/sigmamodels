@@ -1,7 +1,14 @@
-from sigmaflow.exp2 import *
 import matplotlib.pyplot as plt
 import argparse
 import os
+
+try:
+    from jaxtyping import install_import_hook
+
+    with install_import_hook("sigmaflow", "beartype.beartype"):
+        from sigmaflow.exp2 import *
+except:
+    from sigmaflow.exp2 import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--capture", action="store_true")
@@ -29,7 +36,7 @@ fm = static_flow_module()
 m = static_sigma_model(mp, fm)
 m_cells = m
 m_cells = eqx.tree_deserialise_leaves(C.DIR + "/cellsjax53.eqx", m)
-m_cells.flow.set_params(dict(t=3, dt=0.2, msq=1, alpha=0, mode="adaptive"))
+m_cells.flow.set_params(dict(t=3.0, dt=0.2, msq=1.0, alpha=0.0, mode="adaptive"))
 
 f1, axs = plt.subplots(1, 2)
 figures.append(f1)
@@ -56,7 +63,7 @@ print(
 
 # %% ===========================================================
 mp = Diffusion_Tensor((512, 512, 3), C.KEY, metric_generator_baboon)
-fm = static_flow_module(dict(t=3, msq=1))
+fm = static_flow_module(dict(t=3.0, msq=1.0))
 m = static_sigma_model(mp, fm)
 m_bab = eqx.tree_deserialise_leaves(C.DIR + "/self_trained_baboon.eqx", m)
 

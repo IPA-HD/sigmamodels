@@ -1,5 +1,12 @@
-from sigmaflow.exp1 import *
 import argparse
+
+try:
+    from jaxtyping import install_import_hook
+
+    with install_import_hook("sigmaflow", "beartype.beartype"):
+        from sigmaflow.exp1 import *
+except:
+    from sigmaflow.exp1 import *
 
 plt.rcParams["text.usetex"] = True
 parser = argparse.ArgumentParser()
@@ -12,10 +19,10 @@ u, v = np.meshgrid(u, v)
 u, v = map(lambda xx: np.pad(xx, 1, mode="wrap"), (u, v))
 
 C = coordinates(
-    U=u,
-    V=v,
+    U=jnp.array(u),
+    V=jnp.array(v),
     TRI=mtri.Triangulation(u.ravel(), v.ravel()),
-    CORNERS=np.vstack([np.zeros(3), np.eye(3)]).T,
+    CORNERS=jnp.vstack([np.zeros(3), np.eye(3)]).T,
 )
 
 f1, axs = plt.subplots(1, 1, subplot_kw=dict(projection="3d"))
@@ -31,7 +38,7 @@ axs.set_zticks([0, 0.5, 1])
 f2, axs = plt.subplots(1, 4, subplot_kw=dict(projection="3d"), figsize=(35, 15))
 axit = iter(axs)
 v0 = gen_v0(C)
-v1 = sigmaflow(v0, 80, m=0)
+v1 = sigmaflow(v0, 80.0, m=0.0)
 p = sm(v1)[..., :-1]
 p = p.swapaxes(-1, 1)
 for X, ax in zip(p[(0, 1, 2, 3), :, :], axit):
@@ -41,7 +48,7 @@ f2.tight_layout(pad=0.1, w_pad=0.0)
 # %% -----------------------------------------------------------
 v = torus_80()
 v0 = v.swapaxes(0, -1)
-v1 = sigmaflow(v0, 5, m=1, alpha=0, solver=dx.Dopri5())
+v1 = sigmaflow(v0, 5.0, m=1.0, alpha=0.0, solver=dx.Dopri5())
 p = sm(v1)[..., :-1]
 p = p.swapaxes(-1, 1)
 
@@ -75,19 +82,19 @@ ax.axis("off")
 
 # %% -----------------------------------------------------------
 ind = iter((1, 2))
-for m in (0, 0.1):
+for m in (0.0, 0.1):
     if m == 0:
         f6, ax = plt.subplots(1, 1)
     else:
         f7, ax = plt.subplots(1, 1)
-    for a in (-1, 0, 1):
+    for a in (-1.0, 0.0, 1.0):
         v0 = 5 * v.swapaxes(0, -1)
-        v1 = sigmaflow(v0, 20, m=m, alpha=a)
+        v1 = sigmaflow(v0, 20.0, m=m, alpha=a)
         p = sm(v1)
         ax.plot(
             np.linspace(0, 20, 10),
             jax.vmap(mean_entropy)(p),
-            label=f"$\\alpha$ = {a:2d}",
+            label=f"$\\alpha$ = {int(a):2d}",
         )
         ax.xaxis.set_tick_params(labelsize=14)
         ax.yaxis.set_tick_params(labelsize=14)

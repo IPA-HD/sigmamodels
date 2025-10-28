@@ -471,29 +471,16 @@ class UNet(eqx.Module):
 
 def unet(nl, dim1, dim2, ks, mass, scale, seed=13812378, **kwargs):
     key = jax.random.key(seed)
-    # m = SigmaFlow(key, nl, dim1, dim2, ks, mass)
     m = UNet(
         data_shape=(dim1, 456, 620),
         is_biggan=False,
-        dim_mults=(2, 2),
+        dim_mults=[2, 2],
         hidden_size=dim2,
         heads=1,
         dim_head=32,
-        dropout_rate=0,
+        dropout_rate=0.0,
         num_res_blocks=nl,
         attn_resolutions=[228, 310],
         key=jax.random.key(seed),
     )
     return m
-
-
-if __name__ == "__main__":
-    from unet import *
-    from brute import sigmalayers
-    import numpy as np
-
-    # x = np.load("ex5/features.npz")["l1"]
-    m = unet(2, 9, 32, 1, 1, 1)
-    sm = sigmalayers(15, 9, 32, 15, 1, 1)
-    # eqx.tree_serialise_leaves("tst.eqx", m)
-    # eqx.tree_serialise_leaves("tsts.eqx", sm)

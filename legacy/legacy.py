@@ -76,7 +76,7 @@ m = eqx.tree_deserialise_leaves(f"{pth}/full.eqx", m)
 f1, axs = plt.subplots(1, 4, figsize=(20, 5))
 # ite = iter(train_dataloader)
 # ite = bp
-for a, f in zip(axs, ite):
+for a, f in zip(axs, iter(ite)):
     a.imshow(plt.cm.tab20(f[0, :, :]))
     a.axis("off")
 plt.tight_layout(pad=1)

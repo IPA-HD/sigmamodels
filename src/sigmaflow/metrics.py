@@ -24,7 +24,9 @@ def metric_generator_cells(
     return diff_tens, scale
 
 
-def metric_generator_baboon(x):
+def metric_generator_baboon(
+    x: Float[Array, "3"],
+) -> tuple[Float[Array, "3"], Float[Array, "1"]]:
     """Metric for baboon"""
     v, scale, alpha = x
     scale = jax.nn.sigmoid(scale) * 1 + 0.1

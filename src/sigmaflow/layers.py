@@ -4,51 +4,26 @@ import jax.numpy as jnp
 from .flow import Laplace_Beltrami
 from einops import rearrange
 import numpy as np
-
-
-def patch_factory(features, labels, size):
-    w = np.max(features.shape)
-
-    @jax.vmap
-    def _ret(n):
-        i, j = np.random.randint(0, w - size, 2)
-        k = np.random.randint(0, 1)
-        return (
-            features[k, i : i + size, j : j + size],
-            labels[k, i : i + size, j : j + size],
-        )
-
-    return _ret
+from jaxtyping import PRNGKeyArray, Float, Array
+from collections.abc import Callable
+from typing import Generic, TypeVar
 
 
 class Aggregator(eqx.Module):
     cnv: eqx.nn.Conv2d
 
-    def __init__(self, dim1, dim2, ks, key):
+    def __init__(self, dim1: int, dim2: int, ks: int, key: PRNGKeyArray):
         self.cnv = eqx.nn.Conv2d(dim1, dim2, kernel_size=ks, padding="same", key=key)
 
-    def __call__(self, x):
+    def __call__(self, x: Float[Array, "w h c"]) -> Float[Array, "w h d"]:
         x = rearrange(x, "w h c -> c w h")
         x = self.cnv(x)
         return rearrange(x, "c w h -> w h c")
 
 
-# class Aggregator(eqx.Module):
-#     # cnv: eqx.nn.MultiheadAttention
-#     # norm: eqx.nn.LayerNorm
-
-#     def __init__(self, dim1, dim2, key):
-#         self.attn = eqx.nn.MultiheadAttention(1, dim, key=key)
-#         self.norm = eqx.nn.LayerNorm(dim)
-
-#     def __call__(self, x):
-#         w, h, c = x.shape
-#         x = rearrange(x, "w h c -> (w h) c")
-#         x = jax.vmap(self.norm)(x + self.attn(x, x, x))
-#         return x.reshape(w, h, c)
-
-
-def state_to_metric(x):
+def state_to_metric(
+    x: Float[Array, "3"],
+) -> tuple[Float[Array, "3"], Float[Array, "1"]]:
     v, scale, alpha = x
     scale = 1 - jax.nn.tanh(jnp.abs(scale)) * 0.9
     l1 = 1 - jax.nn.tanh(jnp.abs(v)) * 0.9
@@ -70,7 +45,9 @@ class SFLayer(eqx.Module):
     mass: jax.Array
     mlp: eqx.nn.Sequential
 
-    def __init__(self, key, dim1, dim2, ks, mass):
+    def __init__(
+        self, key: PRNGKeyArray, dim1: int, dim2: int, ks: int, mass: float | int
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.cnv = Aggregator(dim1, dim2, ks, k2)
         self.mlp = eqx.nn.Sequential(
@@ -83,14 +60,17 @@ class SFLayer(eqx.Module):
         )
         self.mass = jnp.array(mass)
 
-    def __call__(self, x, key=None):
+    def __call__(self, x: Float[Array, "w h c"], key=None) -> Float[Array, "w h c"]:
+        x = self.cnv
         y = self.cnv(x)
         jjm = jax.vmap(jax.vmap((self.mlp)))
         y = jjm(y)
         a, b = jax.vmap(jax.vmap(state_to_metric))(y)
         return (1 + self.mass) * x + 0.5 * Laplace_Beltrami(a, x) / b
 
-    def metric(self, x, key=None):
+    def metric(
+        self, x: Float[Array, "w h c"], key=None
+    ) -> tuple[Float[Array, "w h 3"], Float[Array, "w h 1"]]:
         y = self.agg(x)
         y = jax.vmap(jax.vmap((self.mlp)))(y)
         a, b = jax.vmap(jax.vmap(state_to_metric))(y)
@@ -99,12 +79,20 @@ class SFLayer(eqx.Module):
 
 class AFLayer(eqx.Module):
     cnv: Aggregator
-    mass: jax.Array
+    mass: Array
     mlp: eqx.nn.Sequential
     noise: float
     key: int
 
-    def __init__(self, key, dim1, dim2, ks, mass, noise=0):
+    def __init__(
+        self,
+        key: PRNGKeyArray,
+        dim1: int,
+        dim2: int,
+        ks: int,
+        mass: int | float,
+        noise: float = 0.0,
+    ):
         k1, k2, k3 = jax.random.split(key, 3)
         self.cnv = Aggregator(dim1, dim2, ks, k2)
         self.mlp = eqx.nn.Sequential(
@@ -119,7 +107,7 @@ class AFLayer(eqx.Module):
         self.key = np.random.randint(0, 13891298)
         self.noise = noise
 
-    def __call__(self, x, key=None):
+    def __call__(self, x: Float[Array, "w h c"], key=None) -> Float[Array, "w h c"]:
         y = self.cnv(x)
         jjm = jax.vmap(jax.vmap((self.mlp)))
         y = jjm(y)
@@ -128,7 +116,9 @@ class AFLayer(eqx.Module):
         p = jax.nn.softmax(x, axis=-1)
         return (1 + self.mass) * x + 0.5 * Laplace_Beltrami(a, p) / b
 
-    def metric(self, x, key=None):
+    def metric(
+        self, x, key=None
+    ) -> tuple[Float[Array, "w h 3"], Float[Array, "w h 1"]]:
         y = self.agg(x)
         y = jax.vmap(jax.vmap((self.mlp)))(y)
         a, b = jax.vmap(jax.vmap(state_to_metric))(y)
@@ -196,7 +186,11 @@ class SigmaFlow(eqx.Module):
 
         return v
 
-    def metric(self, x, key=None):
+    def metric(
+        self, x: Float[Array, "w h c"], key=None
+    ) -> tuple[
+        Float[Array, "w h c"], list[Float[Array, "w h 3"]], list[Float[Array, "w h 1"]]
+    ]:
         jjm = jax.vmap(jax.vmap((self.mlp)))
         v = x
         A = []
@@ -213,7 +207,7 @@ class SigmaFlow(eqx.Module):
         return v, A, B
 
 
-def scale_model(m, scale):
+def scale_model(m: SigmaFlow, scale: float) -> SigmaFlow:
     weights = lambda mp: jax.tree_util.tree_leaves(
         mp, is_leaf=lambda x: isinstance(x, jax.Array)
     )
@@ -222,56 +216,16 @@ def scale_model(m, scale):
     return eqx.tree_at(weights, m, rescaled)
 
 
-def sigmasimple(nl, dim1, dim2, ks, mass, scale, seed=13812378, **kwargs):
+def sigmasimple(
+    nl: int,
+    dim1: int,
+    dim2: int,
+    ks: int,
+    mass: float | int,
+    scale: float,
+    seed=13812378,
+    **kwargs,
+) -> SigmaFlow:
     key = jax.random.key(seed)
     m = SigmaFlow(key, nl, dim1, dim2, ks, mass)
     return scale_model(m, scale)
-
-
-if __name__ == "__test__":
-    #
-
-    from brute import *
-    from optax import softmax_cross_entropy_with_integer_labels as ce
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    x = np.load("ex5/features.npz")
-    x = jnp.array([x["l1"], x["l3"]])[0]
-    l = np.load("ex5/labels.npz")
-    l = jnp.array([l["l1"], l["l3"]])[0]
-    m = sigmasimple(20, 9, 32, 15, 1, 0)
-    # m = sigmalayers(20, 9, 32, 15, 1, 1.0)
-    # n = sigmalayers(10, 9, 32, 15, 1, 2.0)
-    plt.imshow(m(x).argmax(-1))
-    # len(m)
-
-    eqx.tree_serialise_leaves("ex5/tst", m)
-    r = eqx.tree_deserialise_leaves("ex5/tst", n)
-    len(m)
-
-    # plt.imshow(m(x).argmax(-1), cmap="jet")
-    np.mean(l != x.argmax(-1))
-    ce(x, l).mean() / jnp.log(9)
-
-    import h5py
-
-    f = h5py.File("ex5/featureVectors.h5", "r")
-    fs = f["Dataset1"]
-    plt.imshow(fs[30:180, 30:180].argmax(-1), cmap="tab20")
-    plt.imshow(x.argmax(-1)[30:180, 30:180], cmap="tab20")
-    plt.imshow(l[30:180, 30:180], cmap="tab20")
-
-    q = fs[30:180, 30:180]
-    q.max(), q.min()
-    r = x[30:180, 30:180]
-    r.max(), r.min()
-
-    plt.imshow((fs[30:180, 30:180] - x[30:180, 30:180]).argmax(-1))
-
-    plt.imshow(m(x).argmax(-1), cmap="jet")
-    plt.imshow(x.argmax(-1), cmap="jet")
-    plt.imshow(l, cmap="jet")
-
-    l.shape
-    mp.conv.weight.shape

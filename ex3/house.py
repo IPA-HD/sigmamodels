@@ -8,8 +8,15 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sigmaflow.layers import sigmasimple
-from sigmaflow.unet import unet
+try:
+    from jaxtyping import install_import_hook
+
+    with install_import_hook("sigmaflow", "beartype.beartype"):
+        from sigmaflow.layers import sigmasimple
+        from sigmaflow.unet import unet
+except:
+    from sigmaflow.layers import sigmasimple
+    from sigmaflow.unet import unet
 
 plt.rcParams["text.usetex"] = True
 plt.rcParams.update({"font.size": 30})
@@ -47,6 +54,7 @@ def ret():
     l = labels[k, i : i + size, j : j + size]
     rs = np.log(np.eye(nl)[l] * 0.2 + 0.8)
     rs += np.random.randn(*rs.shape) * 0.2
+    rs = jnp.array(rs)
     rs = (rs - rs.min(-1, keepdims=True)) / (
         rs.max(-1, keepdims=True) - rs.min(-1, keepdims=True)
     )
@@ -54,8 +62,8 @@ def ret():
 
 
 rr, ll = zip(*[ret() for _ in range(32)])
-rr = np.array(rr)
-ll = np.array(ll)
+rr = jnp.array(rr)
+ll = jnp.array(ll)
 perf1 = np.mean(ell(jax.vmap(sm)(rr)) == ll)
 perf2 = np.mean(ell(jax.vmap(mu)(rr)) == ll)
 print(f"Train perf house fronts Sigmaflow {perf1}, UNet {perf2}")
@@ -92,6 +100,7 @@ plt.tight_layout(pad=0.5)
 ll = labels[0:2]
 rr = np.log(np.eye(nl)[ll] * 0.2 + 0.8)
 rr += np.random.randn(*rr.shape) * 0.2
+rr = jnp.array(rr)
 rr3 = rr / jnp.linalg.norm(rr, axis=-1, keepdims=True)
 rr2 = (rr - rr.min(-1, keepdims=True)) / (
     rr.max(-1, keepdims=True) - rr.min(-1, keepdims=True)
@@ -125,6 +134,7 @@ plt.tight_layout(pad=0.5)
 ll = labels[2]
 rr = np.log(np.eye(nl)[ll] * 0.2 + 0.8)
 rr += np.random.randn(*rr.shape) * 0.2
+rr = jnp.array(rr)
 rr3 = rr / jnp.linalg.norm(rr, axis=-1, keepdims=True)
 rr2 = (rr - rr.min(-1, keepdims=True)) / (
     rr.max(-1, keepdims=True) - rr.min(-1, keepdims=True)

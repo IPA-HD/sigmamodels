@@ -19,18 +19,18 @@ from .flow import sigmaflow_anisotropic_static
 
 
 ########################## CONSTANTS ##########################
-Ar = Array | np.ndarray
+Ar = Array
 JV = jax.vmap
 
 
 @dataclass
 class Constants:
-    L_CELLS: UInt8[Ar, "512 512"]
-    L_BABOON: Int[Ar, "512 512"]
+    L_CELLS: UInt8[np.ndarray, "512 512"]
+    L_BABOON: Int[np.ndarray, "512 512"]
     KEY: PRNGKeyArray
     DIR: str
     NOISE: Float[Ar, "512 512 20"]
-    COLORCODE: Float[Ar, "20 3"]
+    COLORCODE: Float[np.ndarray, "20 3"]
 
 
 ###############################################################
@@ -47,7 +47,7 @@ class Diffusion_Tensor(eqx.Module):
         metric_generator: Callable[
             [Float[Ar, "3"]], Tuple[Float[Ar, "3"], Float[Ar, "1"]]
         ],
-        rgb: Float[Ar, "w h 3"] = None,
+        rgb: Float[Ar, "w h 3"] | None = None,
     ):
         if rgb is None:
             self.rgb = jax.random.normal(key, size) * 0.1
@@ -89,7 +89,7 @@ def rnd(x: Float[Ar, "... c"]) -> Int[Ar, "..."]:
     return x.argmax(-1)
 
 
-def plot(ax: plt.Axes, x: Float[Ar, "w h *c"]):
+def plot(ax: plt.Axes, x: Float[np.ndarray | Array, "w h *c"]):
     ax.imshow(x)
     ax.axis("off")
 

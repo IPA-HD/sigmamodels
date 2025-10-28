@@ -8,8 +8,15 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sigmaflow.layers import sigmasimple
-from sigmaflow.unet import unet
+try:
+    from jaxtyping import install_import_hook
+
+    with install_import_hook("sigmaflow", "beartype.beartype"):
+        from sigmaflow.layers import sigmasimple
+        from sigmaflow.unet import unet
+except:
+    from sigmaflow.layers import sigmasimple
+    from sigmaflow.unet import unet
 
 plt.rcParams["text.usetex"] = True
 plt.rcParams.update({"font.size": 30})
@@ -48,7 +55,7 @@ def ret(n):
     rs = (rs - rs.min(-1, keepdims=True)) / (
         rs.max(-1, keepdims=True) - rs.min(-1, keepdims=True)
     )
-    return rs, l
+    return jnp.array(rs), jnp.array(l)
 
 
 rr, ll = ret(32)
@@ -87,6 +94,7 @@ plt.tight_layout(pad=0.5)
 ll = labels[0]
 rr = np.log(np.eye(nl)[ll] * 0.2 + 0.8)
 rr += np.random.randn(*rr.shape) * 0.2
+rr = jnp.array(rr)
 rr3 = rr / jnp.linalg.norm(rr, axis=-1, keepdims=True)
 rr2 = (rr - rr.min(-1, keepdims=True)) / (
     rr.max(-1, keepdims=True) - rr.min(-1, keepdims=True)
@@ -119,8 +127,9 @@ plt.axis("off")
 plt.tight_layout(pad=0.5)
 
 ll = np.load(pth + "/airplane.npy")[10:-10, 10:-10]
-rr = np.log(np.eye(nl)[ll] * 0.2 + 0.8)
+rr = jnp.log(np.eye(nl)[ll] * 0.2 + 0.8)
 rr += np.random.randn(*rr.shape) * 0.2
+rr = jnp.array(rr)
 rr3 = rr / jnp.linalg.norm(rr, axis=-1, keepdims=True)
 rr2 = (rr - rr.min(-1, keepdims=True)) / (
     rr.max(-1, keepdims=True) - rr.min(-1, keepdims=True)

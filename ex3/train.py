@@ -39,7 +39,7 @@ def loss(
 
 def train(
     model,
-    data: Array,
+    data: tuple[int, Array],
     optim: optax.GradientTransformationExtraArgs,
     opt_state: optax.OptState,
     logfile: str,

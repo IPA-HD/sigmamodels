@@ -1,10 +1,13 @@
 import jax
 import jax.numpy as jnp
 from functools import partial
+from jaxtyping import Array, Float
 
 
 @jax.jit
-def metric_to_filter(diffusion_tensor):
+def metric_to_filter(
+    diffusion_tensor: Float[Array, "w h 3"],
+) -> Float[Array, "w h 1 9"]:
     """
     Calcualte the local filter matrix from a given discrete diffusion tensor/conformally invariant metric.
     """
@@ -36,23 +39,28 @@ def metric_to_filter(diffusion_tensor):
     return A
 
 
-def Laplace_Beltrami(diffusion_tensor, x):
+def Laplace_Beltrami(
+    diffusion_tensor: Float[Array, "w h 3"], x: Float[Array, "w h c"]
+) -> Float[Array, "w h c"]:
     """
     Compute the unnormalized Laplace-Beltrami operator with a given diffusion tensor and signal X.
     """
     A = metric_to_filter(diffusion_tensor)
     return jax.lax.conv_general_dilated_local(
+        # creates an ariticial channel axis
         x[jnp.newaxis, ...],
         A,
         filter_shape=(3, 3),
         window_strides=(1, 1),
         padding="SAME",
+        # uses the original channel axis as a batch dimension
         dimension_numbers=("CHWN", "HWOI", "CHWN"),
     )[0]
 
 
-# @partial(jax.vmap, in_axes=[None, -1], out_axes=-1)
-def norm_cotangent(inv_metric, omega):
+def norm_cotangent(
+    inv_metric: Float[Array, "w h 3"], omega: Float[Array, "2 w h c"]
+) -> Float[Array, "w h c"]:
     """
     Compute the norm induced by a metric and a contangent vector omega.
     """

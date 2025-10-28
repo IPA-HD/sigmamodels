@@ -11,12 +11,11 @@ import numpy as np
 import diffrax as dx
 from einops import rearrange
 from jaxtyping import Array, Float, Float64, jaxtyped
-from scipy.special import softmax
 
 from .flow import sigmaflow, Pi_0
 
 ########################## CONSTANTS ##########################
-AR = Array | np.ndarray
+AR = Array
 
 
 @dataclass
@@ -50,7 +49,7 @@ def plot_figures(
 def segre() -> Float[AR, "4 20 20"]:
     p = np.linspace(0, 1, 20)
     q = np.linspace(0, 1, 20)
-    pq = np.dstack([np.outer(x, y) for x, y in product([1 - p, p], [1 - q, q])])
+    pq = jnp.dstack([np.outer(x, y) for x, y in product([1 - p, p], [1 - q, q])])
     pq = pq.swapaxes(-1, 0)
     return pq
 
@@ -71,7 +70,7 @@ def sm(x: Float[AR, "..."]) -> Float[AR, "..."]:
     """
     softmax along last dimension
     """
-    return softmax(x, axis=-1)
+    return jax.nn.softmax(x, axis=-1)
 
 
 def torus_20(C: coordinates) -> Float[AR, "4 23 23"]:
@@ -83,7 +82,7 @@ def torus_20(C: coordinates) -> Float[AR, "4 23 23"]:
     z = np.sin(C.V) * 0.2
     theta = np.stack([x, y, z])
     v = np.stack([x, y, z, theta.sum(0)], axis=0)
-    return softmax(v, axis=0)
+    return jax.nn.softmax(v, axis=0)
 
 
 def torus_80() -> Float[AR, "4 82 82"]:
@@ -99,7 +98,7 @@ def torus_80() -> Float[AR, "4 82 82"]:
     y = (3 + (np.cos(v))) * np.sin(u) * 0.2
     z = np.sin(v) * 0.2
     theta = np.stack([x, y, z])
-    v = np.stack([x, y, z, theta.sum(0)], axis=0)
+    v = jnp.stack([x, y, z, theta.sum(0)], axis=0)
     # V += np.random.randn(*V.shape) * 0.05
     return v
 
@@ -138,6 +137,6 @@ def gen_v0(C: coordinates) -> Float[AR, "23 23 4"]:
     generate a torus in the tangent space
     """
     p = torus_20(C)
-    v0 = np.log(p)
+    v0 = jnp.log(p)
     v0 = Pi_0(v0.swapaxes(0, -1))
     return v0

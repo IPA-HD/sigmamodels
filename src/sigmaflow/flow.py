@@ -3,11 +3,15 @@ import jax
 import jax.numpy as jnp
 import diffrax as dx
 from functools import reduce
+from jaxtyping import Array, Float
+from collections.abc import Callable
 from .matrices import D, Lweights
 from .lb import Laplace_Beltrami, norm_cotangent
 
 
-def convolving(x, y):
+def convolving(
+    x: Float[Array, "w h c"], y: Float[Array, "1 b x x"]
+) -> Float[Array, "b w h c"]:
     """
     Convolve signal with filter y along first two dimensions with circular padding.
     """
@@ -25,28 +29,28 @@ def convolving(x, y):
     return res
 
 
-def derivative(x):
+def derivative(x: Float[Array, "w h c"]) -> Float[Array, "2 w h c"]:
     """
     Convolve with the derivative Filter D.
     """
     return convolving(x, y=jnp.array(D))
 
 
-def laplacian(x):
+def laplacian(x: Float[Array, "w h c"]) -> Float[Array, "w h c"]:
     """
     Convolve with the derivative Filter D.
     """
     return convolving(x, y=jnp.array(Lweights))[0]
 
 
-def Pi_0(x):
+def Pi_0(x: Float[Array, "... c"]) -> Float[Array, "... c"]:
     """
     Project onto tangent space T_0.
     """
     return x - x.mean(-1, keepdims=True)
 
 
-def sm(x):
+def sm(x: Float[Array, "... c"]) -> Float[Array, "... c"]:
     """
     Softmax function.
     """
@@ -54,17 +58,17 @@ def sm(x):
 
 
 def sigmaflow(
-    v0,
-    t,
-    nabla=derivative,
+    v0: Float[Array, "w h c"],
+    t: float,
+    nabla: Callable = derivative,
     *,
-    dt=0.2,
-    ctrl=dx.ConstantStepSize(),
-    solver=dx.Euler(),
-    alpha=0,
-    m=0,
-    mode="adaptive",
-):
+    dt: float = 0.2,
+    ctrl: dx.AbstractStepSizeController = dx.ConstantStepSize(),
+    solver: dx.AbstractSolver = dx.Euler(),
+    alpha: float = 0.0,
+    m: float = 0.0,
+    mode: str = "adaptive",
+) -> Float[Array, "x w h c"]:
     """
     Integrate the sigma flow PDE with a constant flat metric with starting point v0.
     """
@@ -101,18 +105,18 @@ def sigmaflow(
 
 
 def sigmaflow_anisotropic(
-    v0,
-    metric,
+    v0: Float[Array, "w h c"],
+    metric: Callable,
     *,
-    t=1,
-    nabla=derivative,
-    dt=0.2,
-    m=0,
-    alpha=0,
-    ctrl=dx.ConstantStepSize(),
-    solver=dx.Euler(),
-    mode="adaptive",
-):
+    t: float = 1.0,
+    nabla: Callable = derivative,
+    dt: float = 0.2,
+    m: float = 0.0,
+    alpha: float = 0,
+    ctrl: dx.AbstractStepSizeController = dx.ConstantStepSize(),
+    solver: dx.AbstractSolver = dx.Euler(),
+    mode: str = "adaptive",
+) -> Float[Array, "x w h c"]:
     """
     Intergrate the sigma flow PDE with starting point v0 and potentially variable metric.
     """
@@ -156,18 +160,18 @@ def sigmaflow_anisotropic(
 
 
 def sigmaflow_anisotropic_static(
-    v0,
-    metric,
+    v0: Float[Array, "w h c"],
+    metric: Callable,
     *,
-    t=1,
-    nabla=derivative,
-    dt=0.2,
-    msq=0,
-    alpha=0,
-    ctrl=dx.ConstantStepSize(),
-    solver=dx.Euler(),
-    mode="adaptive",
-):
+    t: float = 1.0,
+    nabla: Callable = derivative,
+    dt: float = 0.2,
+    msq: float = 0.0,
+    alpha: float = 0.0,
+    ctrl: dx.AbstractStepSizeController = dx.ConstantStepSize(),
+    solver: dx.AbstractSolver = dx.Euler(),
+    mode: str = "adaptive",
+) -> Float[Array, "x w h c"]:
     """
     Anisotropic sigma flow but with a constant local metric tensor.
     """
@@ -204,74 +208,6 @@ def sigmaflow_anisotropic_static(
         diff_t, scale = metric
         steps = int(t / dt)
         sol = reduce(
-            lambda x, y: x + y * RHS(0, x, (diff_t, scale)),
-            steps * [dt],
-            v0,
-        )[np.newaxis]
-    return sol
-
-
-def sigmaflow_anisotropic_static_jax49(
-    v0,
-    metric,
-    *,
-    t=1,
-    nabla=derivative,
-    dt=0.2,
-    msq=0,
-    alpha=0,
-    ctrl=dx.ConstantStepSize(),
-    solver=dx.Euler(),
-    mode="adaptive",
-):
-    """
-    Anisotropic sigma flow but with a constant local metric tensor.
-    """
-
-    # def RHS(t, v, args):
-    #     diffusing_tensor, det_h, h_inv = args
-    #     logp = jax.nn.log_softmax(v, axis=-1)
-    #     term = Pi_0(
-    #         Laplace_Beltrami(diffusing_tensor, v) / det_h
-    #         + ((1 - alpha) / 2) * (norm_cotangent(h_inv, nabla(logp)))
-    #         + msq * sm(v)
-    #     )
-    #     return jnp.clip(term, -1e8, 1e8)
-    metric = metric()
-
-    def RHS(t, v, args):
-        diff_t, scale = args
-        logp = jax.nn.log_softmax(v, axis=-1)
-        term = Pi_0(
-            scale
-            * (
-                Laplace_Beltrami(diff_t, v)
-                + ((1 - alpha) / 2) * (norm_cotangent(diff_t, nabla(logp)))
-            )
-            + msq * sm(v)
-        )
-        return jnp.clip(term, -1e8, 1e8)
-
-    if mode == "adaptive":
-        f = dx.ODETerm(RHS)
-        sol = dx.diffeqsolve(
-            f,
-            solver,
-            t0=0,
-            t1=t,
-            y0=v0,
-            dt0=dt,
-            saveat=dx.SaveAt(ts=jnp.linspace(0, t, 10)),
-            stepsize_controller=ctrl,
-            args=metric,
-        ).ys
-
-    if mode == "fast":
-        # diffusion_tensor, det_h, h_inv = metric
-        diff_t, scale = metric
-        steps = int(t / dt)
-        sol = reduce(
-            # lambda x, y: x + y * RHS(0, x, (diffusion_tensor, det_h, h_inv)),
             lambda x, y: x + y * RHS(0, x, (diff_t, scale)),
             steps * [dt],
             v0,
